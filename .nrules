@@ -1,0 +1,53 @@
+{
+	"global_replace":"True",
+	"keep_latest_version":"True",
+
+	"filters":{
+		"pdf_filter":{
+			"extension":"*.pdf"
+		},
+		"small_size_filter":{
+			"size":"<1"
+		},
+		"large_size_filter":{
+			"size":">200"
+		},
+		"movie_filter":{
+			"regex":"(?=.*(?:\\.mpeg|\\.mov|\\.mp4|\\.flv|\\.avi|\\.w4v|\\.rmvb|\\.qt|\\.mwv|\\.mpg)$).*$"
+		}
+
+	},
+	"operations":{
+		"pdf_operation":[
+					{
+						"copy":"~/PDFs"
+					},
+					{
+						"copy":"~/PDFs_backup"
+					},
+					{
+						"delete":""
+					}
+				],
+		"movie_operation":[
+					{
+						"move":"~/movies"
+					}
+		]
+	},
+	"directories":[
+		{
+		"directory_path":["~/Downloads/"],
+		"rules":[
+			{
+				"filters":["pdf_filter","small_size_filter"],
+				"operations":["pdf_operation"]
+			},
+			{
+				"filters":["movie_filter","large_size_filter"],
+				"operations":["movie_operation"]
+			}
+		]
+		}
+	]
+}
