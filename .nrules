@@ -31,7 +31,7 @@
 				],
 		"movie_operation":[
 					{
-						"move":"~/movies"
+						"move":"~/my_movies"
 					}
 		]
 	},

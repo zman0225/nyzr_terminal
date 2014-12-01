@@ -3,33 +3,116 @@
 # @Author: ziyuanliu
 # @Date:   2014-11-28 15:21:22
 # @Last Modified by:   ziyuanliu
-# @Last Modified time: 2014-11-28 23:49:06
+# @Last Modified time: 2014-11-30 19:34:02
 
 import argparse
 import time
 import fnmatch, re
+import Queue
+import logging
+import shutil
 
 from json import loads
-from os import makedirs
+from os import makedirs, remove, removedirs
 from collections import defaultdict
 from os.path import join, expanduser, exists, isdir, abspath, split, getsize
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+from threading import Thread
 
 DEFAULT_RULES_FN = '.nrules'
 DEFAULT_TASK_FN = "tasks"
 DEFAULT_SETTING_FN = ".pid"
 DEFAULT_NYZR_DIR = '.nyzr'
 
-class Task(object):
+logging.basicConfig(level=logging.DEBUG,
+                    format='(%(threadName)-10s) %(message)s',
+                    )
+def make_dir(dp):
+	if not exists(dp):
+		makedirs(dp)
+	return dp
+
+class File(object):
+	"""docstring for File"""
+	def __init__(self, fp):
+		super(File, self).__init__()
+		self.fp = expanduser(fp)
+		self.filename = split(self.fp)[1]
+		self.size = self._get_stable_size()
+		self.cmds = {"move":self.move_to_dir,
+			"delete":self.delete,
+			"copy":self.copy_to_dir}
+
+	def _get_stable_size(self):
+		block_time = 0.5
+		size = float(getsize(self.fp))
+		while True:
+			time.sleep(block_time)
+			if size == float(getsize(self.fp)):
+				logging.debug("file size stablized to %f"%size)
+				break
+			else:
+				size = float(getsize(self.fp))
+				block_time*=1.25
+		return size
+
+	def move_to_dir(self,directory):
+		directory = expanduser(directory)
+		if self.exists() and make_dir(directory):
+			new_fp = join(directory,self.filename)
+			logging.info("moving %s to %s"%(self.fp,new_fp))
+			shutil.move(self.fp,new_fp)
+
+	def copy_to_dir(self,directory):
+		directory = expanduser(directory)
+		if self.exists() and make_dir(directory):
+			new_fp = join(directory,self.filename)
+			logging.info("copying %s to %s"%(self.fp,new_fp))
+			shutil.copy2(self.fp,new_fp)
+
+	def delete(self):
+		if self.exists():
+			logging.info("deleting %s"%(self.fp))
+			remove(self.fp)
+
+	def exists(self):
+		return exists(self.fp)
+		
+
+class Task(Thread):
 	"""docstring for Task"""
-	def __init__(self):
+	def __init__(self,fp):
 		super(Task, self).__init__()
+		self.fp = fp
+		self.rmanager = RuleManager()
+
+	def run(self):
+		logging.info("starting operation")
+		self.file = File(self.fp)
+
+		#are any rules valid?
+		self.operations = self.rmanager.apply_rules(self.fp)
+		if not self.operations:
+			return
+
+		opMgr = OperationManager()
+		for op in self.operations:
+			ops = opMgr.operations[op]
+			for i,o in enumerate(ops):
+				cmd, args = o.split('#')
+				
+				if len(args)>0:
+					self.file.cmds[cmd.lower()](args)
+				else:
+					self.file.cmds[cmd.lower()]()
+		return 
 
 class nyzr_handler(FileSystemEventHandler):
 	def __init__(self,*args, **kwargs):
 		super(nyzr_handler,self).__init__(*args,**kwargs)
-		self.rmanager = RuleManager()
+		
 
 	def on_moved(self, event):
 		super(nyzr_handler, self).on_moved(event)
@@ -41,18 +124,13 @@ class nyzr_handler(FileSystemEventHandler):
 		super(nyzr_handler, self).on_created(event)
 
 		what = 'directory' if event.is_directory else 'file'
-		print "Created %s: %s" % (what, event.src_path)
-		#wait for file to stablize 
-		size = float(getsize(event.src_path))
-		while True:
-			time.sleep(0.5)
-			if size == float(getsize(event.src_path)):
-				break
-			else:
-				size = float(getsize(event.src_path))
-				print "still stablizing %d"%size
+		logging.info("Created %s: %s" % (what, event.src_path))
+		
+		t = Task(event.src_path)
+		t.start()
+		# self.queue.put_nowait(t)
 
-		self.rmanager.apply_rules(event.src_path)
+		
 
 	def on_deleted(self, event):
 		super(nyzr_handler, self).on_deleted(event)
@@ -95,30 +173,30 @@ class FilterManager(object):
 					if not reobj.match(basename):
 						return False
 					else:
-						print "regex matched for %s"%basename
+						logging.info("regex matched for %s"%basename)
 				elif filter_name == "extension":
 					if not fnmatch.fnmatch(basename,content):
 						return False
 					else:
-						print "extension matched: %s %s"%(basename,content)
+						logging.info("extension matched: %s %s"%(basename,content))
 
 				if filter_name == "size":
 					file_size = float(getsize(filepath))/1000**2
-					print "file size [%f] "%(file_size)
+					logging.info("file size [%f] "%(file_size))
 					if '<' in content[0]:
 						if float(content[1:])<file_size:
 							return False
 						else:
-							print "file size [%f] matched %s"%(file_size,content)
+							logging.info("file size [%f] matched %s"%(file_size,content))
 					elif float(content[1:])>=file_size:
 						return False
 					else:
-						print "file size [%f] matched %s"%(file_size,content)
+						logging.info("file size [%f] matched %s"%(file_size,content))
 
 
 				if filter_name == 'origin':
 					pass
-				print "filter matched: ",filtername
+				
 				return True
 
 		except Exception, e:
@@ -162,7 +240,6 @@ class Rule(object):
 		for f in self.filters:
 			if not FilterManager.filter_matched(f,fp):
 				return False
-		print "Rule matched for",f
 		return True
 	
 	def __str__(self):
@@ -175,6 +252,7 @@ class RuleManager(object):
 		if not cls._instance:
 			cls._instance = super(RuleManager,cls).__new__(cls,*args,**kwargs)
 			cls._instance.rules = defaultdict(list)
+			cls._instance.queue = Queue.LifoQueue()
 		return cls._instance
 
 	def add_rule(self,rule):
@@ -182,18 +260,15 @@ class RuleManager(object):
 
 	def apply_rules(self,pathname):
 		(dirname,basename) = split(pathname)
-		print "checking rules for",dirname,":", basename
 		for directory in self.rules.keys():
 			absp = abspath(expanduser(directory))
 			if absp==dirname:
 				for rule in self.rules[directory]:
 					if rule.does_apply(pathname):
-						#create task from operations
-						return
-						
-					
-
-
+						logging.info("does apply, going to apply operations: %s"%rule)
+						return rule.operations						
+		logging.info("did not fit any rules")		
+		return None
 
 	def __str__(self):
 		return " ".join(["%s"%(", ".join([str(f) for f in self.rules[s]])) for s in self.rules.keys()])
@@ -238,20 +313,16 @@ def read_rules(path=None):
 
 
 
-
-
-def make_dir():
+def make_default_dir():
 	dir_path = join('~/',DEFAULT_NYZR_DIR)
-	if not exists(dir_path):
-		makedirs(dir_path)
-	return dir_path
+	return make_dir(dir_path)
 
 def initialize_program():
 	#overwrite
-	make_dir()
+	make_default_dir()
 
 def write_pid(pid):
-	dir_path = make_dir()
+	dir_path = make_default_dir()
 	pid_path = join(dir_path,DEFAULT_SETTING_FN)
 	if not exists(pid_path):
 		f = open(pid_path,'w')
@@ -261,7 +332,7 @@ def write_pid(pid):
 	f.close()
 
 def read_pids():
-	dir_path = make_dir()
+	dir_path = make_default_dir()
 	pid_path = join(dir_path,DEFAULT_SETTING_FN)
 	if not exists(pid_path):
 		return []
@@ -278,7 +349,7 @@ if __name__ == '__main__':
 	nyzr = nyzr_handler()
 	observer = Observer()
 	path = expanduser("~/Downloads/")
-	print path
+
 	observer.schedule(nyzr, path, recursive=True)
 	observer.start()
 
