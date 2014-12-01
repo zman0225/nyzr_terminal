@@ -3,7 +3,7 @@
 # @Author: ziyuanliu
 # @Date:   2014-11-28 15:21:22
 # @Last Modified by:   ziyuanliu
-# @Last Modified time: 2014-11-30 19:34:02
+# @Last Modified time: 2014-11-30 20:26:44
 
 import argparse
 import time
@@ -113,21 +113,34 @@ class nyzr_handler(FileSystemEventHandler):
 	def __init__(self,*args, **kwargs):
 		super(nyzr_handler,self).__init__(*args,**kwargs)
 		
+	def add_to_operation_queue(self,src_path):
+		t = Task(src_path)
+		t.start()
 
 	def on_moved(self, event):
 		super(nyzr_handler, self).on_moved(event)
 
 		what = 'directory' if event.is_directory else 'file'
 		# print "Moved %s: from %s to %s" % (what, event.src_path, event.dest_path)
+		src_dir,src_fn = split(event.src_path)
+		dest_dir,dest_fn = split(event.dest_path)
+		print dest_fn+'.crdownload',src_fn
+		if src_dir==dest_dir and dest_fn+'.crdownload'==src_fn:
+			#deal with crdownload files 
+			self.add_to_operation_queue(event.dest_path)
 
 	def on_created(self, event):
 		super(nyzr_handler, self).on_created(event)
 
 		what = 'directory' if event.is_directory else 'file'
+		(directory,basename) = split(event.src_path)
+		if basename[0]=='.' or '.crdownload' in basename:
+			#igoring dotfiles and crdownload files
+			return
+
 		logging.info("Created %s: %s" % (what, event.src_path))
-		
-		t = Task(event.src_path)
-		t.start()
+		self.add_to_operation_queue(event.src_path)
+
 		# self.queue.put_nowait(t)
 
 		
@@ -136,14 +149,14 @@ class nyzr_handler(FileSystemEventHandler):
 		super(nyzr_handler, self).on_deleted(event)
 
 		what = 'directory' if event.is_directory else 'file'
-		# print "Deleted %s: %s" % (what, event.src_path)
+		print "Deleted %s: %s" % (what, event.src_path)
 
 
 	def on_modified(self, event):
 		super(nyzr_handler, self).on_modified(event)
 
 		what = 'directory' if event.is_directory else 'file'
-		# print "Modified %s: %s" % (what, event.src_path)
+		print "Modified %s: %s" % (what, event.src_path)
 
 class FilterManager(object):
 	"""Singleton pattern to manage all the filters"""
