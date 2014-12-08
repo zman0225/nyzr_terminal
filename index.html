@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Nyzr terminal : Organize any folder with rules. ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Nyzr terminal</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/ziyuanliu/nyzr_terminal">View on GitHub</a>
+
+          <h1 id="project_title">Nyzr terminal</h1>
+          <h2 id="project_tagline">Organize any folder with rules. </h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/ziyuanliu/nyzr_terminal/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/ziyuanliu/nyzr_terminal/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h3>
+<a id="welcome-to-nyzr-terminal" class="anchor" href="#welcome-to-nyzr-terminal" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to NYZR Terminal.</h3>
+
+<p>This is a current work in progress. </p>
+
+<h4>
+<a id="inspiration--goal" class="anchor" href="#inspiration--goal" aria-hidden="true"><span class="octicon octicon-link"></span></a>Inspiration &amp; Goal:</h4>
+
+<pre><code>For every hacker to have a clean downloads folder. 
+</code></pre>
+
+<h4>
+<a id="get-started" class="anchor" href="#get-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Get Started</h4>
+
+<pre><code>pip install -r requirements
+python nyzr.py
+</code></pre>
+
+<h3>
+<a id="how-it-works" class="anchor" href="#how-it-works" aria-hidden="true"><span class="octicon octicon-link"></span></a>How it works</h3>
+
+<p>Each folder should be monitored with a set of rules (see .nrules file), all of your rules 
+should be kept in a json encoded file.</p>
+
+<p>I designed nyzr with modularity in mind</p>
+
+<pre><code>"filters":{
+        "pdf_filter":{
+            "extension":"*.pdf"
+        },
+        "small_size_filter":{
+            "size":"&lt;1"
+        },
+        "large_size_filter":{
+            "size":"&gt;200"
+        },
+        "movie_filter":{
+            "regex":"(?=.*(?:\\.mpeg|\\.mov|\\.mp4|\\.flv|\\.avi|\\.w4v|\\.rmvb|\\.qt|\\.mwv|\\.mpg)$).*$"
+        },
+
+    },
+</code></pre>
+
+<p>Filters are separate simple rules that you can set by regex, extension, and size (more on the way :)).</p>
+
+<p>Operations are the actions taken once your files meet the rules. </p>
+
+<pre><code>"operations":{
+        "pdf_operation":[
+                    {
+                        "copy":"~/PDFs"
+                    },
+                    {
+                        "copy":"~/PDFs_backup"
+                    },
+                    {
+                        "delete":""
+                    }
+                ],
+        "movie_operation":[
+                    {
+                        "move":"~/my_movies"
+                    }
+        ]
+    }
+</code></pre>
+
+<p>Lastly, we have directories, which is just a container for different rules and operations. While the order for rules
+do not matter, it does for operations. </p>
+
+<pre><code>"directories":[
+        {
+        "directory_path":["~/Downloads/"],
+        "rules":[
+            {
+                "filters":["pdf_filter","small_size_filter"],
+                "operations":["pdf_operation"]
+            },
+            {
+                "filters":["movie_filter","large_size_filter"],
+                "operations":["movie_operation"]
+            }
+        ]
+        }
+    ]
+</code></pre>
+
+<h3>
+<a id="todo" class="anchor" href="#todo" aria-hidden="true"><span class="octicon octicon-link"></span></a>TODO</h3>
+
+<ul>
+<li>Daemonized as a service</li>
+<li>cron-job/monitor for additional features such as 24-hours deletion periods</li>
+<li>Other interesting commands</li>
+</ul>
+
+<h3>
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+
+<p>email: <a href="mailto:ziyuan.liu@dartmouth.edu">ziyuan.liu@dartmouth.edu</a></p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Nyzr terminal maintained by <a href="https://github.com/ziyuanliu">ziyuanliu</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
