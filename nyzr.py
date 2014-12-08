@@ -3,7 +3,7 @@
 # @Author: ziyuanliu
 # @Date:   2014-11-28 15:21:22
 # @Last Modified by:   ziyuanliu
-# @Last Modified time: 2014-11-30 20:26:44
+# @Last Modified time: 2014-12-04 17:31:26
 
 import argparse
 import time
@@ -80,6 +80,36 @@ class File(object):
 	def exists(self):
 		return exists(self.fp)
 		
+class NyzrManager(object):
+	"""NyzrManager manages the queue and the basic terminal controls"""
+	def __init__(self, task_num=10):
+		super(NyzrManager, self).__init__()
+		self.task_limit = task_num
+		self.task_num = 0
+		self.restart()
+
+	def run():
+		while True:
+			pass
+
+	def restart(self):
+		pass
+
+	def shutdown(self):
+		pass
+
+	def read_rules(path=None):
+		if not path:
+			path = join(join('~/',DEFAULT_NYZR_DIR),DEFAULT_RULES_FN)
+
+		if not exists(path):
+			raise Warning("Rules file: [%s] not found!")
+
+		with open(path,'r') as f:
+			content = f.read()
+
+		js = loads(content)
+		into_rules(js)
 
 class Task(Thread):
 	"""docstring for Task"""
